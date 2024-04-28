@@ -1,3 +1,0 @@
-/home/anivia/code/CLionProjects/AA2/.../CMakeFiles/AA2.dir
-/home/anivia/code/CLionProjects/AA2/.../CMakeFiles/edit_cache.dir
-/home/anivia/code/CLionProjects/AA2/.../CMakeFiles/rebuild_cache.dir
