@@ -64,7 +64,7 @@ int main() {
     printf("\nVector c:\n");
     print_vector(c, N);
 
-    printf("\nMatriz M:\n");
+    printf("\nMatriz M:\n");//as
     print_matrix(M, N);
 
     simple_dgmv(N, c,M,b);
