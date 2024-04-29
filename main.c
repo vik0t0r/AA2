@@ -57,16 +57,19 @@ static void unroll_dgmv( size_t n, float c[n], const float M[n][n], const float 
 }
 
 // c = c + M * b
+// only works properly with N multiple of 16
 static void avx512_dgmv( size_t n, float c[n], const float M[n][n], const float b[n]) {
-    // 512 bits da para 16 floats
-    for (int i = 0 ; i<n ; i++){
-        for (int j = 0 ; j<n ; j += 4){
-            c[i] += M[i][j+0]*b[j+0]+
-                    M[i][j+1]*b[j+1]+
-                    M[i][j+2]*b[j+2]+
-                    M[i][j+3]*b[j+3];
+    for (int i = 0; i < n; ++i) {
+        __m512 sum = _mm512_setzero_ps();
+        for (int j = 0; j < n; j += 16) {
 
+            __m512 M_row = _mm512_loadu_ps(&M[i][j]);
+            __m512 b_vec = _mm512_loadu_ps(&b[j]);
+
+            sum = _mm512_fmadd_ps(M_row, b_vec, sum);
         }
+
+        c[i] += _mm512_reduce_add_ps(sum);
     }
 }
 
