@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define N 8
+#define N 32
 
 void init_vector(float vec[], size_t size) {
     for (size_t i = 0; i < size; i++) {
@@ -58,12 +58,16 @@ static void unroll_dgmv( size_t n, float c[n], const float M[n][n], const float 
 
 // c = c + M * b
 static void avx512_dgmv( size_t n, float c[n], const float M[n][n], const float b[n]) {
-    for (int i = 0 ; i<n ; i++)
-        for (int j = 0 ; j<n ; j += 4)
+    // 512 bits da para 16 floats
+    for (int i = 0 ; i<n ; i++){
+        for (int j = 0 ; j<n ; j += 4){
             c[i] += M[i][j+0]*b[j+0]+
                     M[i][j+1]*b[j+1]+
                     M[i][j+2]*b[j+2]+
                     M[i][j+3]*b[j+3];
+
+        }
+    }
 }
 
 
