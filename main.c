@@ -122,7 +122,7 @@ int main() {
     printf("\nVector c:\n");
     print_vector(c, N);
 
-    printf("Vector b:\n");
+    printf("\nVector b:\n");
     print_vector(b, N);
 
     printf("\nMatriz M:\n");//as
@@ -144,7 +144,7 @@ int main() {
     printf("\nVector c (avx512_dgmv):\n");
     print_vector(res3, N);
 
-    printf("------------------------------------------------------------------\n\n\n");
+    printf("\n\n\n------------------------------------------------------------------\n\n\n");
     // dgemm
 // realiza la operación matricial C = C + A*B, donde A, B y C son tres
 // matrices de elementos de tipo double de dimensiones:
