@@ -75,7 +75,7 @@ static void avx512_dgmv( size_t n, float c[n], const float M[n][n], const float 
 
 // dgemm
 // realiza la operación matricial C = C + A*B, donde A, B y C son tres
-// matrices de elementos de tipo double de dimensiones:
+// matrices de elementos de tipo float de dimensiones:
 // A de dim1 x dim2
 // B de dim2 x dim3
 // C de dim1 x dim3
@@ -90,6 +90,12 @@ void simple_dgemm( int dim1, int dim2, int dim3, float *A, float *B, float *C) {
     }
 }
 
+// dgemm
+// realiza la operación matricial C = C + A*B, donde A, B y C son tres
+// matrices de elementos de tipo float de dimensiones:
+// A de dim1 x dim2
+// B de dim2 x dim3
+// C de dim1 x dim3
 void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
     for (int i = 0; i < dim1; i++) {
         for (int j = 0; j < dim2; j++) {
@@ -97,7 +103,6 @@ void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
             for (int k = 0; k < dim3; k += 16) {
 
                 __m512 bvec = _mm512_loadu_ps(B + j * dim3 + k);
-
                 __m512 cvec = _mm512_loadu_ps(C + i * dim3 + k);
 
                 cvec = _mm512_fmadd_ps(avec, bvec, cvec);
