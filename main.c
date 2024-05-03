@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define N 16
+#define N 17
 
 void init_vector(float vec[], size_t size) {
     for (size_t i = 0; i < size; i++) {
@@ -107,6 +107,11 @@ void transpose(int rows, int cols, int matrix[rows][cols], int result[cols][rows
     }
 }
 
+__mmask16 create_mask(int num_integers) {
+    // Shift 1 left by num_integers and subtract 1 to set num_integers least significant bits to 1
+    return (1 << num_integers) - 1;
+}
+
 // dgemm
 // realiza la operación matricial C = C + A*B, donde A, B y C son tres
 // matrices de elementos de tipo float de dimensiones:
@@ -121,16 +126,32 @@ void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
     // pick up each of the vectors (assume 16x16 matrix)
 
     for (int i = 0; i < dim1; i++) { // i -> indice fila de matriz A (dim1)
-        __m512 Avec = _mm512_loadu_ps(A + dim2 * i);
         for (int j = 0; j < dim2; j++) { // j -> indicde
-            __m512 Bvec = _mm512_loadu_ps(b_transposed[j]);
+            float acum = 0;
+            for (int tmpDim2 = 0; tmpDim2 < dim2; tmpDim2 += 16){ // tmpDim2 -> vector a dividir pues las matrices no son de 16 x 16 :(
 
-            // multiplicamos elemento a elemento
-            __m512 mulvec = _mm512_mul_ps(Avec, Bvec);
+                // calculamos mascara
+                __mmask16 mask;
+                int cantidad_elementos = dim2 - tmpDim2;
+                int resto;
+                if (tmpDim2 == 0){resto = 0;}else{resto = dim2 % tmpDim2;}
 
-            // sumamos los elementos y los guardamos:
-            C[i * dim3 + j] += _mm512_reduce_add_ps(mulvec);
+                if (cantidad_elementos < 16 && (resto != 0 || dim2 < 16)){
+                    mask = _mm512_int2mask(create_mask(cantidad_elementos)); // 16 elementos
+                } else {
+                    mask = _mm512_int2mask(0b1111111111111111); // 16 elementos
+                }
+                // cargamos datos
+                __m512 Avec = _mm512_mask_loadu_ps(Avec, mask,A + dim2 * i);
+                __m512 Bvec = _mm512_mask_loadu_ps(Bvec,mask,b_transposed[j]);
 
+                // multiplicamos elemento a elemento
+                __m512 mulvec = _mm512_mask_mul_ps(mulvec,mask,Avec, Bvec);
+
+                // sumamos los elementos y los guardamos:
+                 acum += _mm512_mask_reduce_add_ps(mask, mulvec);
+            }
+            C[i * dim3 + j] += acum;
         }
     }
 }
