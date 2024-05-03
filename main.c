@@ -139,7 +139,7 @@ void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
     // pick up each of the vectors (assume 16x16 matrix)
 
     for (int i = 0; i < dim1; i++) { // i -> indice fila de matriz A (dim1)
-        for (int j = 0; j < dim3; j++) { // j -> indicde
+        for (int j = 0; j < dim2; j++) { // j -> indicde
             float acum = 0;
             for (int tmpDim2 = 0; tmpDim2 < dim2; tmpDim2 += 16){ // tmpDim2 -> vector a dividir pues las matrices no son de 16 x 16 :(
 
@@ -154,7 +154,7 @@ void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
                 }
                 // cargamos datos
                 __m512 Avec = _mm512_mask_loadu_ps(Avec, mask,A + dim2 * i + tmpDim2);
-                __m512 Bvec = _mm512_mask_loadu_ps(Bvec,mask,b_transposed +j*dim3 + tmpDim2);
+                __m512 Bvec = _mm512_mask_loadu_ps(Bvec,mask,b_transposed[j] + tmpDim2);
 
                 // multiplicamos elemento a elemento
                 __m512 mulvec = _mm512_mask_mul_ps(mulvec,mask,Avec, Bvec);
@@ -212,9 +212,9 @@ int main() {
 // C de dim1 x dim3
 
     int dim1,dim2,dim3;
-    dim1 = 2;
+    dim1 = 1;
     dim2 = 2;
-    dim3 = 2;
+    dim3 = 3;
 
     float A[dim1][dim2];
     float B[dim2][dim3];
