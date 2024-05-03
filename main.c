@@ -22,7 +22,7 @@ void init_matrix(float mat[][N], size_t size) {
 void init_matrix_rc(float *mat, size_t rows, size_t cols) {
     for (size_t i = 0; i < rows; i++) {
         for (size_t j = 0; j < cols; j++) {
-            mat[i*rows+j] = (float)(rand() % 10);
+            mat[i*cols+j] = (float)(rand() % 10);
         }
     }
 }
@@ -44,6 +44,17 @@ void print_matrix(float mat[][N], size_t size) {
         printf("]\n");
     }
 }
+
+void print_matrix_rc(float *mat, size_t rows, size_t cols) {
+    for (size_t i = 0; i < rows; i++) {
+        printf("[");
+        for (size_t j = 0; j < cols; j++) {
+            printf("%.2f ", mat[i*cols+j]);
+        }
+        printf("]\n");
+    }
+}
+
 
 // c = c + M * b
 static void simple_dgmv( size_t n , float c[ n ], const float M[n][n], const float b[n]) {
@@ -99,6 +110,7 @@ void simple_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
     }
 }
 
+
 void transpose(int rows, int cols, int matrix[rows][cols], int result[cols][rows]) {
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
@@ -106,6 +118,7 @@ void transpose(int rows, int cols, int matrix[rows][cols], int result[cols][rows
         }
     }
 }
+
 
 __mmask16 create_mask(int num_integers) {
     // Shift 1 left by num_integers and subtract 1 to set num_integers least significant bits to 1
@@ -121,7 +134,7 @@ __mmask16 create_mask(int num_integers) {
 void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
     float b_transposed[dim3][dim2];
     // transpose multiplying matrix to access with vector functions
-    transpose(dim1,dim2, B, b_transposed);
+    transpose(dim2,dim3, B, b_transposed);
 
     // pick up each of the vectors (assume 16x16 matrix)
 
@@ -141,7 +154,7 @@ void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
                 }
                 // cargamos datos
                 __m512 Avec = _mm512_mask_loadu_ps(Avec, mask,A + dim2 * i + tmpDim2);
-                __m512 Bvec = _mm512_mask_loadu_ps(Bvec,mask,b_transposed[j] + tmpDim2);
+                __m512 Bvec = _mm512_mask_loadu_ps(Bvec,mask,b_transposed +j*dim3 + tmpDim2);
 
                 // multiplicamos elemento a elemento
                 __m512 mulvec = _mm512_mask_mul_ps(mulvec,mask,Avec, Bvec);
@@ -199,9 +212,9 @@ int main() {
 // C de dim1 x dim3
 
     int dim1,dim2,dim3;
-    dim1 = 3;
-    dim2 = 3;
-    dim3 = 3;
+    dim1 = 2;
+    dim2 = 2;
+    dim3 = 2;
 
     float A[dim1][dim2];
     float B[dim2][dim3];
@@ -213,26 +226,26 @@ int main() {
 
     init_matrix_rc(A, dim1,dim2);
     printf("\nMatriz A:\n");//as
-    print_matrix(A, N);
+    print_matrix_rc(A, dim1,dim2);
 
     init_matrix_rc(B, dim2,dim3);
     printf("\nMatriz B:\n");//as
-    print_matrix(B, N);
+    print_matrix_rc(B, dim2,dim3);
 
     init_matrix_rc(C, dim1,dim3);
     printf("\nMatriz C:\n");//as
-    print_matrix(C, N);
+    print_matrix_rc(C, dim1,dim3);
     memcpy(res1_1, C, sizeof(float)*dim1*dim3);
     memcpy(res2_2, C, sizeof(float)*dim1*dim3);
 
 
     simple_dgemm(dim1,dim2,dim3, A,B,res1_1);
     printf("\nMatriz C (simple_dgemm):\n");
-    print_matrix(res1_1, N);
+    print_matrix_rc(res1_1, dim1,dim3);
 
     avx512_dgemm(dim1,dim2,dim3, A,B,res2_2);
     printf("\nMatriz C (avx512_dgemm):\n");
-    print_matrix(res2_2, N);
+    print_matrix_rc(res2_2, dim1, dim3);
 
     if (memcmp(res1_1, res2_2,dim1*dim3*sizeof(float)) == 0){
         printf("\n--------\n\nMATRIXES EQUAL\n\n");
