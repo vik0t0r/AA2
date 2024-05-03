@@ -19,6 +19,14 @@ void init_matrix(float mat[][N], size_t size) {
     }
 }
 
+void init_matrix_rc(float **mat, size_t rows, size_t cols) {
+    for (size_t i = 0; i < rows; i++) {
+        for (size_t j = 0; j < cols; j++) {
+            mat[i][j] = (float)(rand() % 10);
+        }
+    }
+}
+
 void print_vector(float vec[], size_t size) {
     printf("[");
     for (size_t i = 0; i < size; i++) {
@@ -79,13 +87,22 @@ static void avx512_dgmv( size_t n, float c[n], const float M[n][n], const float 
 // A de dim1 x dim2
 // B de dim2 x dim3
 // C de dim1 x dim3
-void simple_dgemm( int dim1, int dim2, int dim3, float *A, float *B, float *C) {
-    for (int i=0; i<dim1; i++){
-        for (int j=0; j<dim2; j++){
-            for (int k=0; k<dim3; k++){
-                //C[i][k] += C[i][k] + A[i][j]*B[j][k];
-                *(C+i*dim3+k) += *(A+i*dim2+j) * *(B+j*dim3+k);
+void simple_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
+    for (int i = 0; i < dim1; i++) {
+        for (int j = 0; j < dim3; j++) {
+            float sum = 0.0;
+            for (int k = 0; k < dim2; k++) {
+                sum += A[i * dim2 + k] * B[k * dim3 + j];
             }
+            C[i * dim3 + j] += sum;
+        }
+    }
+}
+
+void transpose(int rows, int cols, int matrix[rows][cols], int result[cols][rows]) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            result[j][i] = matrix[i][j];
         }
     }
 }
@@ -97,18 +114,23 @@ void simple_dgemm( int dim1, int dim2, int dim3, float *A, float *B, float *C) {
 // B de dim2 x dim3
 // C de dim1 x dim3
 void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
-    for (int i = 0; i < dim1; i++) {
-        for (int j = 0; j < dim2; j++) {
-            __m512 avec = _mm512_set1_ps(*(A + i * dim2 + j));
-            for (int k = 0; k < dim3; k += 16) {
+    float b_transposed[dim3][dim2];
+    // transpose multiplying matrix to access with vector functions
+    transpose(dim1,dim2, B, b_transposed);
 
-                __m512 bvec = _mm512_loadu_ps(B + j * dim3 + k);
-                __m512 cvec = _mm512_loadu_ps(C + i * dim3 + k);
+    // pick up each of the vectors (assume 16x16 matrix)
 
-                cvec = _mm512_fmadd_ps(avec, bvec, cvec);
+    for (int i = 0; i < dim1; i++) { // i -> indice fila de matriz A (dim1)
+        __m512 Avec = _mm512_loadu_ps(A + dim2 * i);
+        for (int j = 0; j < dim2; j++) { // j -> indicde
+            __m512 Bvec = _mm512_loadu_ps(b_transposed[j]);
 
-                _mm512_storeu_ps(C + i * dim3 + k, cvec);
-            }
+            // multiplicamos elemento a elemento
+            __m512 mulvec = _mm512_mul_ps(Avec, Bvec);
+
+            // sumamos los elementos y los guardamos:
+            C[i * dim3 + j] += _mm512_reduce_add_ps(mulvec);
+
         }
     }
 }
