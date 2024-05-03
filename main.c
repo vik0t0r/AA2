@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define N 17
+#define N 7
 
 void init_vector(float vec[], size_t size) {
     for (size_t i = 0; i < size; i++) {
@@ -133,17 +133,15 @@ void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
                 // calculamos mascara
                 __mmask16 mask;
                 int cantidad_elementos = dim2 - tmpDim2;
-                int resto;
-                if (tmpDim2 == 0){resto = 0;}else{resto = dim2 % tmpDim2;}
 
-                if (cantidad_elementos < 16 && (resto != 0 || dim2 < 16)){
+                if (cantidad_elementos < 16) {
                     mask = _mm512_int2mask(create_mask(cantidad_elementos)); // 16 elementos
                 } else {
                     mask = _mm512_int2mask(0b1111111111111111); // 16 elementos
                 }
                 // cargamos datos
-                __m512 Avec = _mm512_mask_loadu_ps(Avec, mask,A + dim2 * i);
-                __m512 Bvec = _mm512_mask_loadu_ps(Bvec,mask,b_transposed[j]);
+                __m512 Avec = _mm512_mask_loadu_ps(Avec, mask,A + dim2 * i + tmpDim2);
+                __m512 Bvec = _mm512_mask_loadu_ps(Bvec,mask,b_transposed[j] + tmpDim2);
 
                 // multiplicamos elemento a elemento
                 __m512 mulvec = _mm512_mask_mul_ps(mulvec,mask,Avec, Bvec);
