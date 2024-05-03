@@ -139,7 +139,7 @@ void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
     // pick up each of the vectors (assume 16x16 matrix)
 
     for (int i = 0; i < dim1; i++) { // i -> indice fila de matriz A (dim1)
-        for (int j = 0; j < dim2; j++) { // j -> indicde
+        for (int j = 0; j < dim3; j++) { // j -> indicde
             float acum = 0;
             for (int tmpDim2 = 0; tmpDim2 < dim2; tmpDim2 += 16){ // tmpDim2 -> vector a dividir pues las matrices no son de 16 x 16 :(
 
