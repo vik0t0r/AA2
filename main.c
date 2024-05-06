@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define N 18
+#define N 23
 
 void init_vector(float vec[], size_t size) {
     for (size_t i = 0; i < size; i++) {
@@ -65,31 +65,11 @@ static void simple_dgmv( size_t n , float c[ n ], const float M[n][n], const flo
     }
 }
 
-// c = c + M * b
-static void unroll_dgmv( size_t n, float c[n], const float M[n][n], const float b[n]) {
-    for (int i = 0 ; i<n ; i++)
-        for (int j = 0 ; j<n ; j += 4)
-            c[i] += M[i][j+0]*b[j+0]+
-                    M[i][j+1]*b[j+1]+
-                    M[i][j+2]*b[j+2]+
-                    M[i][j+3]*b[j+3];
-}
+void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C);
 
 // c = c + M * b
-// only works properly with N multiple of 16
 static void avx512_dgmv( size_t n, float c[n], const float M[n][n], const float b[n]) {
-    for (int i = 0; i < n; ++i) {
-        __m512 sum = _mm512_setzero_ps();
-        for (int j = 0; j < n; j += 16) {
-
-            __m512 M_row = _mm512_loadu_ps(&M[i][j]);
-            __m512 b_vec = _mm512_loadu_ps(&b[j]);
-
-            sum = _mm512_fmadd_ps(M_row, b_vec, sum);
-        }
-
-        c[i] += _mm512_reduce_add_ps(sum);
-    }
+    avx512_dgemm(n,n,1,M,b,c);
 }
 
 // dgemm
@@ -139,7 +119,7 @@ void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
     // pick up each of the vectors (assume 16x16 matrix)
 
     for (int i = 0; i < dim1; i++) { // i -> indice fila de matriz A (dim1)
-        for (int j = 0; j < dim3; j++) { // j -> indicde
+        for (int j = 0; j < dim3; j++) { // j -> indice de columna matriz A
             float acum = 0;
             for (int tmpDim2 = 0; tmpDim2 < dim2; tmpDim2 += 16){ // tmpDim2 -> vector a dividir pues las matrices no son de 16 x 16 :(
 
@@ -187,17 +167,12 @@ int main() {
     printf("\nMatriz M:\n");//as
     print_matrix(M, N);
     memcpy(res1, c, sizeof(float)*N);
-    memcpy(res2, c, sizeof(float)*N);
     memcpy(res3, c, sizeof(float)*N);
 
 
     simple_dgmv(N, res1,M,b);
     printf("\nVector c (simple_dgmv):\n");
     print_vector(res1, N);
-
-    unroll_dgmv(N, res2,M,b);
-    printf("\nVector c (unroll_dgmv):\n");
-    print_vector(res2, N);
 
     avx512_dgmv(N, res3,M,b);
     printf("\nVector c (avx512_dgmv):\n");
