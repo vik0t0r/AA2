@@ -99,12 +99,6 @@ void transpose(int rows, int cols, int matrix[rows][cols], int result[cols][rows
     }
 }
 
-
-__mmask16 create_mask(int num_integers) {
-    // Shift 1 left by num_integers and subtract 1 to set num_integers least significant bits to 1
-    return (1 << num_integers) - 1;
-}
-
 // dgemm
 // realiza la operación matricial C = C + A*B, donde A, B y C son tres
 // matrices de elementos de tipo float de dimensiones:
@@ -119,7 +113,7 @@ void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
     // pick up each of the vectors (assume 16x16 matrix)
 
     for (int i = 0; i < dim1; i++) { // i -> indice fila de matriz A (dim1)
-        for (int j = 0; j < dim3; j++) { // j -> indice de columna matriz A
+        for (int j = 0; j < dim3; j++) { // j -> indice de columna matriz B
             float acum = 0;
             for (int tmpDim2 = 0; tmpDim2 < dim2; tmpDim2 += 16){ // tmpDim2 -> vector a dividir pues las matrices no son de 16 x 16 :(
 
@@ -128,7 +122,7 @@ void avx512_dgemm(int dim1, int dim2, int dim3, float *A, float *B, float *C) {
                 int cantidad_elementos = dim2 - tmpDim2;
 
                 if (cantidad_elementos < 16) {
-                    mask = _mm512_int2mask(create_mask(cantidad_elementos)); // 16 elementos
+                    mask = _mm512_int2mask((1 << cantidad_elementos) - 1); // 16 elementos
                 } else {
                     mask = _mm512_int2mask(0b1111111111111111); // 16 elementos
                 }
@@ -187,9 +181,9 @@ int main() {
 // C de dim1 x dim3
 
     int dim1,dim2,dim3;
-    dim1 = 1;
-    dim2 = 2;
-    dim3 = 3;
+    dim1 = 100;
+    dim2 = 100;
+    dim3 = 100;
 
     float A[dim1][dim2];
     float B[dim2][dim3];
